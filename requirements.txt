@@ -1,7 +1,7 @@
-MLB_StatsAPI==1.7.2
-numpy==2.0.0
-pandas==2.2.2
-pybaseball==2.2.7
-Requests==2.32.3
-streamlit==1.35.0
-tqdm==4.66.2
+MLB_StatsAPI
+numpy
+pandas
+pybaseball
+Requests
+streamlit
+tqdm
