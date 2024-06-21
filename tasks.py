@@ -5,6 +5,7 @@ import datetime
 import requests
 import json
 import pybaseball as pb
+import streamlit as st
 
 from pathlib import Path
 from pandas import DataFrame
@@ -142,7 +143,8 @@ def _historic_odds_data(game_data: pd.DataFrame) -> pd.DataFrame:
     close_datetimes = game_datetimes_hourly[game_datetimes_hourly > last_extract_date].tolist()
 
     # Fetch historic data from the-odds-api
-    api_key = the_odds_api['api_key']
+    # api_key = the_odds_api['api_key']
+    api_key = st.secrets['odds_api_key']
 
     all_datetimes = open_datetimes + close_datetimes
     all_datetimes = sorted(all_datetimes)
@@ -222,7 +224,8 @@ def _current_odds_data() -> pd.DataFrame:
     if not new_run:
         df_odds_old = pd.read_parquet(odds_data_file)
 
-    api_key = the_odds_api['api_key']
+    # api_key = the_odds_api['api_key']
+    api_key = st.secrets['odds_api_key']
 
     response = requests.get(
         f'https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey={api_key}&regions=us&markets=h2h,totals&oddsFormat=american'
