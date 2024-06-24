@@ -190,3 +190,31 @@ def aggregated_batting_stats(df_games, last_games: int = None) -> pd.DataFrame:
             dfs.append(df)
 
     return pd.concat(dfs)
+
+
+def ou_correct(row):
+    if row['total_score'] == row['totals_open_point']:
+        return 0
+    elif row['over_bet'] + row['under_bet'] == 0:
+        return 0
+    elif row['over_bet'] & (row['total_score'] > row['totals_open_point']):
+        return 1
+    elif row['under_bet'] & (row['total_score'] < row['totals_open_point']):
+        return 1
+    return -1
+
+
+def odds_to_profit(odds, u = 1):
+    if odds < 0:
+        profit = -100 / odds
+    else:
+        profit = odds / 100
+    return profit * u
+
+
+def ou_win_payout(row):
+    if row['total_score'] > row['totals_open_point']:
+        return odds_to_profit(row['totals_open_price_over'])
+    elif row['total_score'] < row['totals_open_point']:
+        return odds_to_profit(row['totals_open_price_under'])
+    return 0

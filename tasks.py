@@ -1111,6 +1111,9 @@ def _calculate_home_and_away_win_pct(df):
 def _calculate_result_columns(df):
     df['total_score'] = df['home_score'] + df['away_score']
     df['home_win'] = df['home_score'] > df['away_score']
+    df['away_win'] = df['away_score'] > df['home_score']
+    df['over_open'] = np.where(df['total_score'] > df['totals_open_point'], 1, 0)
+    df['under_open'] = np.where(df['total_score'] < df['totals_open_point'], 1, 0)
     return df
 
 
@@ -1201,8 +1204,8 @@ def _cleanup(df):
 
 
 def _simple_feature_engineering(df):
-    df['total_over_open_points'] = np.where(df['total_score'] > df['totals_open_point'], 1, 0)
-    df['total_under_open_points'] = 1 - df['total_over_open_points']
+    # df['total_over_open_points'] = np.where(df['total_score'] > df['totals_open_point'], 1, 0)
+    # df['total_under_open_points'] = 1 - df['total_over_open_points']
 
     df['home_runs_per_game'] = df['home_szn_runs_scored'] / df['home_total_games']
     df['away_runs_per_game'] = df['away_szn_runs_scored'] / df['away_total_games']
@@ -1211,10 +1214,10 @@ def _simple_feature_engineering(df):
     df['total_pitches'] = df['away_Pit_season'] + df['home_Pit_season']
     df['total_weighted_ERA'] = ((df['away_ERA_season'] * df['away_Pit_season'] + df['home_ERA_season'] * df['home_Pit_season']) / df['total_pitches']) * 2
 
-    df['totals_point_movement'] = df['totals_close_point'] - df['totals_open_point']
-    df.loc[df['totals_point_movement'] < 0, 'totals_move_direction'] = -1
-    df.loc[df['totals_point_movement'] == 0, 'totals_move_direction'] = 0
-    df.loc[df['totals_point_movement'] > 0, 'totals_move_direction'] = 1
+    # df['totals_point_movement'] = df['totals_close_point'] - df['totals_open_point']
+    # df.loc[df['totals_point_movement'] < 0, 'totals_move_direction'] = -1
+    # df.loc[df['totals_point_movement'] == 0, 'totals_move_direction'] = 0
+    # df.loc[df['totals_point_movement'] > 0, 'totals_move_direction'] = 1
 
     return df
 
