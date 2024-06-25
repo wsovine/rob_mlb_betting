@@ -14,6 +14,7 @@ from time import sleep
 
 from config import *
 from utils import aggregated_pitching_stats, aggregated_batting_stats
+from models import model_ou_probability
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -1237,6 +1238,7 @@ def _data_availability_flags(df):
 
     return df
 
+
 def load_and_create_dataset():
     # 1. Games & Odds
     # Check for and create the mlb data folder
@@ -1312,6 +1314,9 @@ def load_and_create_dataset():
     # Data availability flags
     df_clean = _data_availability_flags(df_clean)
 
+    # Model Over Under probs
+    df_mod = model_ou_probability(df_clean, cv_iters=10)
+
     # Save complete dataset
-    df_clean.to_parquet(complete_data_parquet)
-    df_clean.to_csv(complete_data_csv)
+    df_mod.to_parquet(complete_data_parquet)
+    df_mod.to_csv(complete_data_csv)

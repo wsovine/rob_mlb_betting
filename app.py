@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import time
 from tasks import load_and_create_dataset
-from models import model_ou_probability
 
 
 def time_convert(sec):
@@ -14,18 +13,15 @@ def time_convert(sec):
 
 def refresh_dataset():
     start_time = time.time()
-    with st.spinner('Loading latest data.'):
+    with st.spinner('Loading latest data and running models.'):
         load_and_create_dataset()
-    with st.spinner('Modeling Over/Under probabilities.'):
-        data_df = pd.read_parquet('data/complete_dataset.parquet')
-        model_ou_probability(df=data_df, target='over_open', cv_iters=10)
 
     end_time = time.time()
     mins, secs = time_convert(end_time - start_time)
     st.success(f'Refresh Complete | {mins}:{secs}')
 
 
-def color_bool(val):
+def style_color_bool(val):
     color = 'green' if val else 'red'
     return f'background-color: {color}'
 
@@ -35,6 +31,7 @@ st.title('Rob MLB Betting Data Download')
 st.subheader('Latest 20 Records')
 df = pd.read_parquet('data/complete_dataset.parquet')
 
+
 st.dataframe(
     df[[
         'game_date', 'status', 'away_name', 'home_name', 'totals_open_point',
@@ -42,7 +39,13 @@ st.dataframe(
         'over_prob', 'under_prob', 'total_score'
     ]]
     .tail(20)
-    .style.map(color_bool, subset=['lineups_available', 'weather_available'])
+    .style
+    .map(style_color_bool, subset=['lineups_available', 'weather_available'])
+    .format({
+        'over_prob': '{:.1%}'.format,
+        'under_prob': '{:.1%}'.format,
+        'totals_open_point': '{:.1f}'.format
+    })
 )
 
 col1, col2 = st.columns(2)
