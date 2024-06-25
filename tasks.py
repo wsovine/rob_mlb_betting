@@ -1186,13 +1186,13 @@ def _combine_weather_data(df_games, df_weather):
 
 def _cleanup(df):
     # remove games with pitchers with few pitches
-    df = df[df['away_Pit_season'] >= minimum_pitches]
-    df = df[df['home_Pit_season'] >= minimum_pitches]
+    # df = df[df['away_Pit_season'] >= minimum_pitches]
+    # df = df[df['home_Pit_season'] >= minimum_pitches]
 
     # remove games with batters with few plate appearances
-    for team in ['away', 'home']:
-        for i in range(1, 10):
-            df = df[df[f'{team}_batter_{i}_PA_season'] >= minimum_plate_appearances]
+    # for team in ['away', 'home']:
+    #     for i in range(1, 10):
+    #         df = df[df[f'{team}_batter_{i}_PA_season'] >= minimum_plate_appearances]
 
     # drop pitcher notes. It is just a constant value.
     df.drop(['home_pitcher_note', 'away_pitcher_note'], axis='columns', inplace=True)
@@ -1222,6 +1222,21 @@ def _simple_feature_engineering(df):
     return df
 
 
+def _data_availability_flags(df):
+    df['lineups_available'] = (
+            df['away_probable_pitcher_id'].notnull() &
+            df['away_batter_1'].notnull() &
+            df['home_probable_pitcher_id'].notnull() &
+            df['home_batter_1'].notnull()
+    )
+
+    df['weather_available'] = (
+            df['weather'].notnull() &
+            df['wind'].notnull()
+    )
+
+    return df
+
 def load_and_create_dataset():
     # 1. Games & Odds
     # Check for and create the mlb data folder
@@ -1232,7 +1247,7 @@ def load_and_create_dataset():
     # Fetch, save and return MLB game data from MLB Stats API
     game_data = _mlb_game_data()
 
-    # Check for and crate the odds api data folder
+    # Check for and create the odds api data folder
     data_directory = the_odds_api['data_directory']
     path = Path(data_directory)
     _directory_check_and_create(path)
@@ -1293,6 +1308,9 @@ def load_and_create_dataset():
 
     # Simple feature engineering
     df_clean = _simple_feature_engineering(df_clean)
+
+    # Data availability flags
+    df_clean = _data_availability_flags(df_clean)
 
     # Save complete dataset
     df_clean.to_parquet(complete_data_parquet)

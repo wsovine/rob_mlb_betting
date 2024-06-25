@@ -22,11 +22,11 @@ def model_ou_probability(df, target: str = 'over_open', cv_iters: int = 100):
     )
     model_params['lambda'] = 100
 
-    pitch_stats = ['ERA', 'FIP', 'K/BB']
+    pitch_stats = ['Pit', 'ERA', 'FIP', 'K/BB']
     pitch_stats = [f'away_{s}' for s in pitch_stats] + [f'home_{s}' for s in pitch_stats]
     pitch_stats = [c for c in df.columns if c.startswith(tuple(pitch_stats))]
     
-    bat_stats = ['BA', 'OBP', 'SLG', 'OPS']
+    bat_stats = ['PA', 'BA', 'OBP', 'SLG', 'OPS']
     bat_stats = (
             [f'home_batter_{i}_{s}' for i in range(1, 10) for s in bat_stats] +
             [f'away_batter_{i}_{s}' for i in range(1, 10) for s in bat_stats]
