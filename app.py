@@ -48,6 +48,6 @@ with col1:
     )
 
 with col2:
-    st.text('May take up to 10 minutes to refresh.')
+    st.text('May take up to 15 minutes to refresh.')
 
 
