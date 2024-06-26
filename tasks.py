@@ -1325,7 +1325,7 @@ def load_and_create_dataset():
     df_clean = _data_availability_flags(df_clean)
 
     # Model Over Under probs
-    df_mod = model_ou_probability(df_clean, cv_iters=10)
+    df_mod = model_ou_probability(df_clean, cv_iters=1)
 
     # Save complete dataset
     df_mod.to_parquet(complete_data_parquet)
