@@ -33,7 +33,9 @@ df = pd.read_parquet('data/complete_dataset.parquet')
 
 
 st.dataframe(
-    df[[
+    df[pd.to_datetime(df.game_date) <= pd.to_datetime('today')]
+    .sort_values('game_datetime', ascending=True)
+    [[
         'game_date', 'status', 'away_name', 'home_name', 'totals_open_point',
         'lineups_available', 'weather_available',
         'over_prob', 'under_prob', 'total_score'
