@@ -849,7 +849,12 @@ def _pitching_stats_by_day(df_games: pd.DataFrame):
 
     for date in (pbar := tqdm(dates_to_load)):
         pbar.set_description(date)
-        df = pb.pitching_stats_range(date)
+        try:
+            df = pb.pitching_stats_range(date)
+        except IndexError as e:
+            print('Index Error with PyBaseball')
+            print(str(e))
+            continue
         df['game_date'] = date
         df = df.set_index(['mlbID', 'game_date'])
 
