@@ -28,19 +28,21 @@ def style_color_bool(val):
 
 st.title('Rob MLB Betting Data Download')
 
-st.subheader('Latest 20 Records')
+st.subheader('Latest 30 Records')
 df = pd.read_parquet('data/complete_dataset.parquet')
 
+df['game_datetime'] = df['game_datetime'].dt.tz_convert('America/Chicago')
+df['game_datetime_str'] = df['game_datetime'].dt.strftime('%m-%d-%Y %-I:%M')
 
 st.dataframe(
     df[pd.to_datetime(df.game_date) <= pd.to_datetime('today')]
     .sort_values('game_datetime', ascending=True)
     [[
-        'game_date', 'status', 'away_name', 'home_name', 'totals_open_point',
+        'game_datetime_str', 'status', 'away_name', 'home_name', 'totals_open_point',
         'lineups_available', 'weather_available',
         'over_prob', 'under_prob', 'total_score'
     ]]
-    .tail(20)
+    .tail(30)
     .style
     .map(style_color_bool, subset=['lineups_available', 'weather_available'])
     .format({
