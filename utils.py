@@ -2,8 +2,16 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 from pathlib import Path
-from config import baseball_ref
+from config import baseball_ref, s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from s3fs.core import S3FileSystem
 import warnings
+
+
+use_s3 = s3
+filesystem = None
+if use_s3:
+    s3 = S3FileSystem(anon=False, key=AWS_ACCESS_KEY_ID, secret=AWS_SECRET_ACCESS_KEY)
+    filesystem = s3
 
 
 def _calculate_era(df: pd.DataFrame):
@@ -33,10 +41,15 @@ def aggregated_pitching_stats(df_games, last_games: int = None, bullpen: bool = 
     :param last_games: if None, then the full season. Provide int for last n games.
     :return: DataFrame
     """
-    path = Path(baseball_ref['data_directory'])
-    pitching_stats_file = path / baseball_ref['pitching_stats_file']
+    directory = baseball_ref['data_directory']
+    file = baseball_ref['pitching_stats_file']
+    if not use_s3:
+        path = Path(directory)
+        pitching_stats_file = path / file
+    else:
+        pitching_stats_file = f'{directory}/{file}'
 
-    df_full = pd.read_parquet(pitching_stats_file).reset_index()
+    df_full = pd.read_parquet(pitching_stats_file, filesystem=filesystem).reset_index()
     df_full = df_full if not bullpen else df_full[df_full['GS'] == 0]
     group_col = 'mlbID' if not bullpen else ['Tm', 'Lev']
 
@@ -133,8 +146,16 @@ def aggregated_batting_stats(df_games, last_games: int = None) -> pd.DataFrame:
     :param last_games: if None, then the full season. Provide int for last n games.
     :return: DataFrame
     """
-    path = Path(baseball_ref['data_directory'])
-    batting_stats_file = path / baseball_ref['batting_stats_file']
+    warnings.filterwarnings('ignore')
+
+    directory = baseball_ref['data_directory']
+    file = baseball_ref['batting_stats_file']
+    if not use_s3:
+        path = Path(directory)
+        batting_stats_file = path / file
+    else:
+        batting_stats_file = f'{directory}/{file}'
+
     dfs = []
 
     for season in df_games.season.unique():
@@ -143,7 +164,7 @@ def aggregated_batting_stats(df_games, last_games: int = None) -> pd.DataFrame:
         start_date = df_season.game_date.min()
         for date in (pbar := tqdm(df_season.game_date.unique())):
             pbar.set_description(date)
-            df_full = pd.read_parquet(batting_stats_file).reset_index()
+            df_full = pd.read_parquet(batting_stats_file, filesystem=filesystem).reset_index()
             df_full = df_full[(df_full['game_date'] >= start_date) & (df_full['game_date'] < date)]
             if last_games is not None:
                 df = df_full.sort_values('game_date').groupby('mlbID').tail(last_games)

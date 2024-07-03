@@ -1,15 +1,27 @@
 from pathlib import Path
 
+import streamlit as st
+
+s3 = True
+
+local_path = 'data'
+
+s3_bucket = 'rob-mlb-betting'
+s3_path = f's3://{s3_bucket}'
+
+AWS_ACCESS_KEY_ID = st.secrets['aws_access_key']
+AWS_SECRET_ACCESS_KEY = st.secrets['aws_secret_access_key']
+
 the_odds_api = {
     'api_key': '',
-    'data_directory': 'data',
+    'data_directory': s3_path if s3 else 'data',
     'odds_file': 'odds.parquet',
     'h2h_odds_file': 'odds_h2h.parquet',
     'totals_odds_file': 'odds_totals.parquet'
 }
 
 mlb_stats_api = {
-    'data_directory': 'data',
+    'data_directory': s3_path if s3 else 'data',
     'game_file': 'mlb_games.parquet',
     'start_season': 2022,
     'start_date': '2022-04-07',
@@ -19,14 +31,14 @@ mlb_stats_api = {
 }
 
 baseball_ref = {
-    'data_directory': 'data',
+    'data_directory': s3_path if s3 else 'data',
     'skip_dates': [],
     'pitching_stats_file': 'pitching_stats.parquet',
     'batting_stats_file': 'batting_stats.parquet'
 }
 
-games_and_odds_file = Path('data/games_and_odds.parquet')
-games_odds_lineups_file = Path('data/games_odds_lineups.parquet')
+games_and_odds_file = f'{s3_path}/games_and_odds.parquet' if s3 else Path('data/games_and_odds.parquet')
+games_odds_lineups_file = f'{s3_path}/games_odds_lineups.parquet' if s3 else Path('data/games_odds_lineups.parquet')
 
 pitching_stats = ['Pit', 'ERA', 'FIP', 'K/BB']
 pitching_stat_games = [None, 10, 5, 2]
@@ -36,5 +48,5 @@ batting_stat_games = [None, 10, 5, 2]
 minimum_pitches = 60
 minimum_plate_appearances = 3
 
-complete_data_parquet = Path('data/complete_dataset.parquet')
-complete_data_csv = Path('data/complete_dataset.csv')
+complete_data_parquet = f'{s3_path}/complete_dataset.parquet' if s3 else Path('data/complete_dataset.parquet')
+complete_data_csv = f'{s3_path}/complete_dataset.csv' if s3 else Path('data/complete_dataset.csv')

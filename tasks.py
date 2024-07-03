@@ -5,18 +5,31 @@ import datetime
 import requests
 import json
 import pybaseball as pb
-import streamlit as st
+from s3fs.core import S3FileSystem
 
 from pathlib import Path
 from pandas import DataFrame
 from tqdm.auto import tqdm
 from time import sleep
 
+import config
 from config import *
 from utils import aggregated_pitching_stats, aggregated_batting_stats
 from models import model_ou_probability
 
 pd.set_option('future.no_silent_downcasting', True)
+
+use_s3 = config.s3
+filesystem = None
+if use_s3:
+    # s3 = boto3.client(
+    #     "s3",
+    #     aws_access_key_id=AWS_ACCESS_KEY_ID,
+    #     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    #     aws_session_token=AWS_SESSION_TOKEN,
+    # )
+    s3 = S3FileSystem(anon=False, key=AWS_ACCESS_KEY_ID, secret=AWS_SECRET_ACCESS_KEY)
+    filesystem = s3
 
 
 def _directory_check_and_create(path: Path):
@@ -25,8 +38,9 @@ def _directory_check_and_create(path: Path):
     :param path:
     :return:
     """
-    if not path.exists():
-        path.mkdir(parents=True)
+    if not use_s3:
+        if not path.exists():
+            path.mkdir(parents=True)
 
 
 # 1. Games & Odds
@@ -38,9 +52,14 @@ def _mlb_game_data():
     """
     # Check for game data file
     data_directory = mlb_stats_api['data_directory']
-    path = Path(data_directory)
-    game_data_file = path / mlb_stats_api['game_file']
-    new_run = not game_data_file.exists()
+    file = mlb_stats_api['game_file']
+    if not use_s3:
+        path = Path(data_directory)
+        game_data_file = path / file
+        new_run = not game_data_file.exists()
+    else:
+        game_data_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(game_data_file)
 
     # Identify current season
     season_data = statsapi.latest_season()
@@ -53,7 +72,7 @@ def _mlb_game_data():
         load_seasons = range(mlb_stats_api['start_season'], current_season + 1)
     else:
         load_seasons = [current_season]
-        old_mlb_games_df = pd.read_parquet(game_data_file)
+        old_mlb_games_df = pd.read_parquet(game_data_file, filesystem=filesystem)
 
     for season in (pbar := tqdm(load_seasons)):
         pbar.set_description(f'Loading MLB Stats API Season {season}')
@@ -93,8 +112,7 @@ def _mlb_game_data():
         merged_mlb_games_df = pd.concat([old_mlb_games_df, mlb_games_df])
     else:
         merged_mlb_games_df = mlb_games_df.copy()
-
-    merged_mlb_games_df.to_parquet(game_data_file)
+    merged_mlb_games_df.to_parquet(game_data_file, filesystem=filesystem)
     return merged_mlb_games_df
 
 
@@ -106,9 +124,15 @@ def _historic_odds_data(game_data: pd.DataFrame) -> pd.DataFrame:
     """
     # Check if file exists or if new run
     data_directory = the_odds_api['data_directory']
-    path = Path(data_directory)
-    odds_data_file = path / the_odds_api['odds_file']
-    new_run = not odds_data_file.exists()
+    file = the_odds_api['odds_file']
+    if not use_s3:
+        path = Path(data_directory)
+        odds_data_file = path / file
+        new_run = not odds_data_file.exists()
+    else:
+        odds_data_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(odds_data_file)
+
     df_odds_old = pd.DataFrame()
 
     # Need to know the last extract date in order to know when
@@ -116,7 +140,7 @@ def _historic_odds_data(game_data: pd.DataFrame) -> pd.DataFrame:
     if new_run:
         last_extract_date = game_data.game_datetime.min()
     else:
-        df_odds_old = pd.read_parquet(odds_data_file)
+        df_odds_old = pd.read_parquet(odds_data_file, filesystem=filesystem)
         # Need to set last_extract_date equal to the latest game time with closing lines
         last_extract_date = max(
             df_odds_old.reset_index().bookmaker_last_update.max(),
@@ -206,7 +230,7 @@ def _historic_odds_data(game_data: pd.DataFrame) -> pd.DataFrame:
     else:
         df_odds_merged = df_odds_old.copy()
 
-    df_odds_merged.to_parquet(odds_data_file)
+    df_odds_merged.to_parquet(odds_data_file, filesystem=filesystem)
     return df_odds_merged
 
 
@@ -217,13 +241,18 @@ def _current_odds_data() -> pd.DataFrame:
     """
     # Check if file exists or if new run
     data_directory = the_odds_api['data_directory']
-    path = Path(data_directory)
-    odds_data_file = path / the_odds_api['odds_file']
-    new_run = not odds_data_file.exists()
+    file = the_odds_api['odds_file']
+    if not use_s3:
+        path = Path(data_directory)
+        odds_data_file = path / file
+        new_run = not odds_data_file.exists()
+    else:
+        odds_data_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(odds_data_file)
 
     df_odds_old = pd.DataFrame()
     if not new_run:
-        df_odds_old = pd.read_parquet(odds_data_file)
+        df_odds_old = pd.read_parquet(odds_data_file, filesystem=filesystem)
 
     # api_key = the_odds_api['api_key']
     api_key = st.secrets['odds_api_key']
@@ -270,7 +299,7 @@ def _current_odds_data() -> pd.DataFrame:
     df_exp = df_exp[~df_exp.index.isin(df_odds_old.index)]
     df_odds_merged = pd.concat([df_odds_old, df_exp])
 
-    df_odds_merged.to_parquet(odds_data_file)
+    df_odds_merged.to_parquet(odds_data_file, filesystem=filesystem)
     return df_odds_merged
 
 
@@ -281,9 +310,13 @@ def _build_odds_datasets() -> tuple:
     """
     # Load the odds data file
     odds_data_directory = the_odds_api['data_directory']
-    odds_data_path = Path(odds_data_directory)
-    odds_data_file = odds_data_path / the_odds_api['odds_file']
-    df_odds = pd.read_parquet(odds_data_file).reset_index()
+    file = the_odds_api['odds_file']
+    if not use_s3:
+        odds_data_path = Path(odds_data_directory)
+        odds_data_file = odds_data_path / file
+    else:
+        odds_data_file = f'{odds_data_directory}/{file}'
+    df_odds = pd.read_parquet(odds_data_file, filesystem=filesystem).reset_index()
 
     # Identify the earliest and latest datetimes available for each H2H line
     updates = df_odds[df_odds['market_last_update'] < df_odds['commence_time']]
@@ -362,9 +395,13 @@ def _build_odds_datasets() -> tuple:
     df_h2h = h2h_open_cons.join(h2h_close_cons)
 
     directory = the_odds_api['data_directory']
-    path = Path(directory)
-    file = path / the_odds_api['h2h_odds_file']
-    df_h2h.to_parquet(file)
+    file = the_odds_api['h2h_odds_file']
+    if not use_s3:
+        path = Path(directory)
+        file_path = path / file
+    else:
+        file_path = f'{directory}/{file}'
+    df_h2h.to_parquet(file_path, filesystem=filesystem)
 
     # Identify the earliest and latest datetimes available for each Totals line
     updates = df_odds[df_odds['market_last_update'] < df_odds['commence_time']]
@@ -445,9 +482,13 @@ def _build_odds_datasets() -> tuple:
     df_totals = totals_open_cons.join(totals_close_cons)
 
     directory = the_odds_api['data_directory']
-    path = Path(directory)
-    file = path / the_odds_api['totals_odds_file']
-    df_totals.to_parquet(file)
+    file = the_odds_api['totals_odds_file']
+    if not use_s3:
+        path = Path(directory)
+        file_path = path / file
+    else:
+        file_path = f'{directory}/{file}'
+    df_totals.to_parquet(file_path, filesystem=filesystem)
 
     return df_h2h, df_totals
 
@@ -563,7 +604,7 @@ def _create_combined_games_and_odds_dataset(df_games: pd.DataFrame, df_h2h: pd.D
          'h2h_close_datetime_home', 'h2h_close_datetime_away'
          ]).drop_duplicates('game_id', keep='last')
 
-    df.to_parquet(games_and_odds_file)
+    df.to_parquet(games_and_odds_file, filesystem=filesystem)
 
 
 # 2. Lineups
@@ -572,16 +613,23 @@ def _historic_lineup_data(game_data: pd.DataFrame) -> DataFrame:
     df_games = game_data[~game_data.status.isin(['Postponed', 'Cancelled', 'Scheduled', 'Pre-Game'])]
     df_games = df_games.set_index('game_id')
 
-    mlb_stats_api_directory = Path(mlb_stats_api['data_directory'])
-    historic_lineup_file = mlb_stats_api_directory / mlb_stats_api['historic_lineup_file']
-    new_run = not historic_lineup_file.exists()
+    # Check if file exists or if new run
+    data_directory = mlb_stats_api['data_directory']
+    file = mlb_stats_api['historic_lineup_file']
+    if not use_s3:
+        path = Path(data_directory)
+        historic_lineup_file = path / file
+        new_run = not historic_lineup_file.exists()
+    else:
+        historic_lineup_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(historic_lineup_file)
 
     df_historic_lineups = pd.DataFrame()
 
     if new_run:
         games_to_load = df_games.index.tolist()
     else:
-        df_historic_lineups = pd.read_parquet(historic_lineup_file)
+        df_historic_lineups = pd.read_parquet(historic_lineup_file, filesystem=filesystem)
         games_to_load = df_games[~df_games.index.isin(df_historic_lineups.index)].index.tolist()
 
     dfs = []
@@ -671,7 +719,7 @@ def _historic_lineup_data(game_data: pd.DataFrame) -> DataFrame:
             df = df[~df.index.isin(df_historic_lineups.index)]
             df = pd.concat([df_historic_lineups, df])
 
-        df.to_parquet(historic_lineup_file)
+        df.to_parquet(historic_lineup_file, filesystem=filesystem)
         return df
     else:
         print('No historic starting lineups to load.')
@@ -687,15 +735,21 @@ def _probable_lineup_data(game_data: pd.DataFrame) -> DataFrame:
     df_games = df_games[(df_games.game_date >= today) & (df_games.game_date <= tomorrow)]
     df_games = df_games.set_index('game_id')
 
+    # Check if file exists or if new run
     data_directory = mlb_stats_api['data_directory']
-    path = Path(data_directory)
-    probable_lineup_file = path / mlb_stats_api['probable_lineup_file']
-    new_run = not probable_lineup_file.exists()
+    file = mlb_stats_api['probable_lineup_file']
+    if not use_s3:
+        path = Path(data_directory)
+        probable_lineup_file = path / file
+        new_run = not probable_lineup_file.exists()
+    else:
+        probable_lineup_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(probable_lineup_file)
 
     df_probable_lineups = pd.DataFrame()
 
     if not new_run:
-        df_probable_lineups = pd.read_parquet(probable_lineup_file)
+        df_probable_lineups = pd.read_parquet(probable_lineup_file, filesystem=filesystem)
         df_games = df_games[~df_games.index.isin(df_probable_lineups.index)]
 
     games_to_load = df_games.index.tolist()
@@ -786,7 +840,7 @@ def _probable_lineup_data(game_data: pd.DataFrame) -> DataFrame:
             df_probable_lineups.update(df)
             df = df[~df.index.isin(df_probable_lineups.index)]
             df = pd.concat([df_probable_lineups, df])
-        df.to_parquet(probable_lineup_file)
+        df.to_parquet(probable_lineup_file, filesystem=filesystem)
         return df
     else:
         print('No probable starting lineups to load.')
@@ -794,7 +848,7 @@ def _probable_lineup_data(game_data: pd.DataFrame) -> DataFrame:
 
 
 def _combine_lineup_data(df_historic: pd.DataFrame, df_probable: pd.DataFrame) -> pd.DataFrame:
-    df_games_odds = pd.read_parquet(games_and_odds_file)
+    df_games_odds = pd.read_parquet(games_and_odds_file, filesystem=filesystem)
 
     df_combined = df_games_odds.set_index('game_id')
     games_odds_overlap_cols = ['home_probable_pitcher', 'away_probable_pitcher']
@@ -823,16 +877,22 @@ def _combine_lineup_data(df_historic: pd.DataFrame, df_probable: pd.DataFrame) -
             )
             df_combined = df_combined.drop(f'{team}_batter_{batter}_probable', axis='columns')
 
-    df_combined.to_parquet(games_odds_lineups_file)
+    df_combined.to_parquet(games_odds_lineups_file, filesystem=filesystem)
     return df_combined
 
 
 def _pitching_stats_by_day(df_games: pd.DataFrame):
     print('Loading daily pitching stats.')
+    # Check if file exists or if new run
     data_directory = baseball_ref['data_directory']
-    path = Path(data_directory)
-    pitching_stats_file = path / baseball_ref['pitching_stats_file']
-    new_run = not pitching_stats_file.exists()
+    file = baseball_ref['pitching_stats_file']
+    if not use_s3:
+        path = Path(data_directory)
+        pitching_stats_file = path / file
+        new_run = not pitching_stats_file.exists()
+    else:
+        pitching_stats_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(pitching_stats_file)
 
     df_pitching_stats = pd.DataFrame()
 
@@ -844,7 +904,7 @@ def _pitching_stats_by_day(df_games: pd.DataFrame):
     if new_run:
         dates_to_load = df_games.game_date.unique().tolist()
     else:
-        df_pitching_stats = pd.read_parquet(pitching_stats_file)
+        df_pitching_stats = pd.read_parquet(pitching_stats_file, filesystem=filesystem)
         dates_to_load = df_games[~df_games.game_date.isin(df_pitching_stats.reset_index().game_date.unique())].game_date.unique().tolist()
 
     for date in (pbar := tqdm(dates_to_load)):
@@ -865,7 +925,7 @@ def _pitching_stats_by_day(df_games: pd.DataFrame):
             df = df[~df.index.isin(df_pitching_stats.index)]
             df = pd.concat([df_pitching_stats, df])
 
-        df.to_parquet(pitching_stats_file)
+        df.to_parquet(pitching_stats_file, filesystem=filesystem)
         df_pitching_stats = df.copy()
 
         sleep(7)
@@ -874,9 +934,14 @@ def _pitching_stats_by_day(df_games: pd.DataFrame):
 def _batting_stats_by_day(df_games):
     print('Loading daily batting stats.')
     data_directory = baseball_ref['data_directory']
-    path = Path(data_directory)
-    batting_stats_file = path / baseball_ref['batting_stats_file']
-    new_run = not batting_stats_file.exists()
+    file = baseball_ref['batting_stats_file']
+    if not use_s3:
+        path = Path(data_directory)
+        batting_stats_file = path / file
+        new_run = not batting_stats_file.exists()
+    else:
+        batting_stats_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(batting_stats_file)
 
     df_batting_stats = pd.DataFrame()
 
@@ -888,7 +953,7 @@ def _batting_stats_by_day(df_games):
     if new_run:
         dates_to_load = df_games.game_date.unique().tolist()
     else:
-        df_batting_stats = pd.read_parquet(batting_stats_file)
+        df_batting_stats = pd.read_parquet(batting_stats_file, filesystem=filesystem)
         dates_to_load = df_games[~df_games.game_date.isin(df_batting_stats.reset_index().game_date.unique())].game_date.unique().tolist()
 
     for date in (pbar := tqdm(dates_to_load)):
@@ -909,7 +974,7 @@ def _batting_stats_by_day(df_games):
             df = df[~df.index.isin(df_batting_stats.index)]
             df = pd.concat([df_batting_stats, df])
 
-        df.to_parquet(batting_stats_file)
+        df.to_parquet(batting_stats_file, filesystem=filesystem)
         df_batting_stats = df.copy()
 
         sleep(7)
@@ -1133,16 +1198,23 @@ def _fetch_weather(game_data: pd.DataFrame):
     df_games = game_data[~game_data.status.isin(['Postponed', 'Cancelled'])]
     df_games = df_games.set_index('game_id')
 
-    mlb_stats_api_directory = Path(mlb_stats_api['data_directory'])
-    weather_file = mlb_stats_api_directory / mlb_stats_api['weather_file']
-    new_run = not weather_file.exists()
+    # Check if file exists or if new run
+    data_directory = mlb_stats_api['data_directory']
+    file = mlb_stats_api['weather_file']
+    if not use_s3:
+        path = Path(data_directory)
+        weather_file = path / file
+        new_run = not weather_file.exists()
+    else:
+        weather_file = f'{data_directory}/{file}'
+        new_run = not s3.exists(weather_file)
 
     df_weather = pd.DataFrame()
 
     if new_run:
         games_to_load = df_games.index.tolist()
     else:
-        df_weather = pd.read_parquet(weather_file)
+        df_weather = pd.read_parquet(weather_file, filesystem=filesystem)
         games_to_load = df_games[~df_games.index.isin(df_weather.index)].index.tolist()
 
     for game_id in (pbar := tqdm(games_to_load)):
@@ -1181,7 +1253,7 @@ def _fetch_weather(game_data: pd.DataFrame):
             df = df[~df.index.isin(df_weather.index)]
             df = pd.concat([df_weather, df])
 
-        df.to_parquet(weather_file)
+        df.to_parquet(weather_file, filesystem=filesystem)
         df_weather = df.copy()
 
     return df_weather
@@ -1328,5 +1400,6 @@ def load_and_create_dataset():
     df_mod = model_ou_probability(df_clean, cv_iters=1)
 
     # Save complete dataset
-    df_mod.to_parquet(complete_data_parquet)
-    df_mod.to_csv(complete_data_csv)
+    df_mod.to_parquet(complete_data_parquet, filesystem=filesystem)
+    if not use_s3:
+        df_mod.to_csv(complete_data_csv)
