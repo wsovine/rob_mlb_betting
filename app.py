@@ -62,10 +62,10 @@ st.dataframe(
 
 col1, col2 = st.columns(2)
 with col1:
-    st.button(
-        'Refresh Data',
-        on_click=refresh_dataset
-    )
+    # st.button(
+    #     'Refresh Data',
+    #     on_click=refresh_dataset
+    # )
     st.download_button(
         'Download Full CSV',
         df.to_csv(index=False).encode('utf-8'),
@@ -74,6 +74,7 @@ with col1:
     )
 
 with col2:
-    st.text('May take up to 15 minutes to refresh.')
+    # st.text('May take up to 15 minutes to refresh.')
+    pass
 
 
