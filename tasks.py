@@ -1401,5 +1401,4 @@ def load_and_create_dataset():
 
     # Save complete dataset
     df_mod.to_parquet(complete_data_parquet, filesystem=filesystem)
-    if not use_s3:
-        df_mod.to_csv(complete_data_csv)
+    df_mod.to_csv(complete_data_csv)

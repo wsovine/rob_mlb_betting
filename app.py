@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import time
 from tasks import load_and_create_dataset
+import config
+from s3fs.core import S3FileSystem
+
+use_s3 = config.s3
+filesystem = None
+if use_s3:
+    s3 = S3FileSystem(anon=False, key=config.AWS_ACCESS_KEY_ID, secret=config.AWS_SECRET_ACCESS_KEY)
+    filesystem = s3
 
 
 def time_convert(sec):
@@ -29,7 +37,7 @@ def style_color_bool(val):
 st.title('Rob MLB Betting Data Download')
 
 st.subheader('Latest 30 Records')
-df = pd.read_parquet('data/complete_dataset.parquet')
+df = pd.read_parquet(config.complete_data_parquet, filesystem=filesystem)
 
 df['game_datetime'] = df['game_datetime'].dt.tz_convert('America/Chicago')
 df['game_datetime_str'] = df['game_datetime'].dt.strftime('%m-%d-%Y %-I:%M')

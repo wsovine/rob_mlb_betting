@@ -49,4 +49,4 @@ minimum_pitches = 60
 minimum_plate_appearances = 3
 
 complete_data_parquet = f'{s3_path}/complete_dataset.parquet' if s3 else Path('data/complete_dataset.parquet')
-complete_data_csv = f'{s3_path}/complete_dataset.csv' if s3 else Path('data/complete_dataset.csv')
+complete_data_csv = Path('data/complete_dataset.csv')
