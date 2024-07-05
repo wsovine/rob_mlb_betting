@@ -6,5 +6,5 @@ Requests
 s3fs
 scikit_learn
 streamlit
-#tqdm
+tqdm
 #xgboost
