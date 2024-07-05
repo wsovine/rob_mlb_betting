@@ -2,7 +2,7 @@ MLB_StatsAPI
 numpy
 pandas
 pybaseball
-#Requests
+Requests
 #s3fs
 #scikit_learn
 #streamlit
