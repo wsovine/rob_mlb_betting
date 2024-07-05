@@ -1,8 +1,8 @@
-import xgboost as xgb
 import pandas as pd
 import numpy as np
 
 from tqdm.auto import tqdm
+from xgboost import XGBClassifier
 
 
 def train_test_split(X, y, test_size=0.25, random_state=None, shuffle=True):
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
 
 def model_ou_probability(df, target: str = 'over_open', cv_iters: int = 100):
-    mod = xgb.XGBClassifier
+    mod = XGBClassifier
     model_params = dict(
         enable_categorical=True,
         eta=0.01,
