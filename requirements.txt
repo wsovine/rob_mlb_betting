@@ -1,4 +1,4 @@
-#MLB_StatsAPI
+MLB_StatsAPI
 numpy
 pandas
 #pybaseball
