@@ -1401,4 +1401,8 @@ def load_and_create_dataset():
 
     # Save complete dataset
     df_mod.to_parquet(complete_data_parquet, filesystem=filesystem)
-    df_mod.to_csv(complete_data_csv)
+    # df_mod.to_csv(complete_data_csv)
+
+
+if __name__ == '__main__':
+    load_and_create_dataset()
