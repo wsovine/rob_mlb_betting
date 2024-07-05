@@ -64,7 +64,6 @@ if __name__ == "__main__":
     print("y_test:\n", y_test)
 
 
-
 def model_ou_probability(df, target: str = 'over_open', cv_iters: int = 100):
     mod = xgb.XGBClassifier
     model_params = dict(
