@@ -146,8 +146,6 @@ def aggregated_batting_stats(df_games, last_games: int = None) -> pd.DataFrame:
     :param last_games: if None, then the full season. Provide int for last n games.
     :return: DataFrame
     """
-    warnings.filterwarnings('ignore')
-
     directory = baseball_ref['data_directory']
     file = baseball_ref['batting_stats_file']
     if not use_s3:
