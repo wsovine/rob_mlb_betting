@@ -4,7 +4,7 @@ pandas
 pybaseball
 Requests
 s3fs
-#scikit_learn
+scikit_learn
 #streamlit
 #tqdm
 #xgboost
