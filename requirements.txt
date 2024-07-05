@@ -8,4 +8,4 @@ scikit_learn
 streamlit
 tqdm
 # xgboost --global-option='-no-binary=xgboost'
-xgboost --config-settings='no-binary=xgboost xgboost'
+xgboost --config-settings='--use_pep517 --no-binary=xgboost'
