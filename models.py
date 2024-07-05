@@ -1,8 +1,68 @@
 import xgboost as xgb
 import pandas as pd
+import numpy as np
 
 from tqdm.auto import tqdm
-from sklearn.model_selection import train_test_split
+
+
+def train_test_split(X, y, test_size=0.25, random_state=None, shuffle=True):
+    """
+    Splits arrays or matrices into random train and test subsets.
+
+    Parameters:
+    X : array-like, shape (n_samples, n_features)
+        The input data to be split.
+    y : array-like, shape (n_samples,) or (n_samples, n_outputs)
+        The target data to be split.
+    test_size : float, int or None, default=0.25
+        If float, should be between 0.0 and 1.0 and represent the proportion of the dataset to include in the test split.
+        If int, represents the absolute number of test samples.
+        If None, the value is set to 0.25.
+    random_state : int or None, default=None
+        If int, random_state is the seed used by the random number generator;
+        If None, the random number generator is the RandomState instance used by `np.random`.
+    shuffle : boolean, default=True
+        Whether or not to shuffle the data before splitting.
+
+    Returns:
+    X_train : array-like, shape (n_train_samples, n_features)
+        The training input samples.
+    X_test : array-like, shape (n_test_samples, n_features)
+        The testing input samples.
+    y_train : array-like, shape (n_train_samples,)
+        The training target values.
+    y_test : array-like, shape (n_test_samples,)
+        The testing target values.
+    """
+    if random_state is not None:
+        np.random.seed(random_state)
+
+    if shuffle:
+        indices = np.random.permutation(len(X))
+    else:
+        indices = np.arange(len(X))
+
+    test_size = int(test_size * len(X)) if isinstance(test_size, float) else test_size
+    train_size = len(X) - test_size
+
+    X_train = X[indices[:train_size]]
+    X_test = X[indices[train_size:]]
+    y_train = y[indices[:train_size]]
+    y_test = y[indices[train_size:]]
+
+    return X_train, X_test, y_train, y_test
+
+
+# Example usage:
+if __name__ == "__main__":
+    X = np.arange(10).reshape((5, 2))
+    y = np.array([0, 1, 2, 3, 4])
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print("X_train:\n", X_train)
+    print("X_test:\n", X_test)
+    print("y_train:\n", y_train)
+    print("y_test:\n", y_test)
+
 
 
 def model_ou_probability(df, target: str = 'over_open', cv_iters: int = 100):
