@@ -3,7 +3,7 @@ numpy
 pandas
 pybaseball
 Requests
-#s3fs
+s3fs
 #scikit_learn
 #streamlit
 #tqdm
