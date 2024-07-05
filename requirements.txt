@@ -7,4 +7,5 @@ s3fs
 scikit_learn
 streamlit
 tqdm
-xgboost --config-settings='-no-binary'
+# xgboost --global-option='-no-binary'
+-r requirements_xgb.txt

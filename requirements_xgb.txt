@@ -1,0 +1,1 @@
+xgboost --global-option='-no-binary'
