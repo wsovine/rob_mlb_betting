@@ -161,6 +161,7 @@ def aggregated_batting_stats(df_games, last_games: int = None) -> pd.DataFrame:
         df_season = df_games[df_games.season == season]
         start_date = df_season.game_date.min()
         for date in (pbar := tqdm(df_season.game_date.unique())):
+            warnings.filterwarnings('ignore')
             pbar.set_description(date)
             df_full = pd.read_parquet(batting_stats_file, filesystem=filesystem).reset_index()
             df_full = df_full[(df_full['game_date'] >= start_date) & (df_full['game_date'] < date)]
