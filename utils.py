@@ -243,7 +243,7 @@ def ou_win_payout(row):
 def prob_to_odds(prob: float, juice: float = 0.0) -> int:
     p = prob + juice
     if p > 0.5:
-        odds = (100 * p) / (1 - p)
+        odds = -(100 * p) / (1 - p)
     elif p < 0.5:
         odds = (100 * (1 - p)) / p
     else:
