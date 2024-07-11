@@ -9,8 +9,8 @@ local_path = 'data'
 s3_bucket = 'rob-mlb-betting'
 s3_path = f's3://{s3_bucket}'
 
-AWS_ACCESS_KEY_ID = st.secrets['aws_access_key']
-AWS_SECRET_ACCESS_KEY = st.secrets['aws_secret_access_key']
+AWS_ACCESS_KEY_ID = st.secrets['aws_access_key'] if s3 else None
+AWS_SECRET_ACCESS_KEY = st.secrets['aws_secret_access_key'] if s3 else None
 
 the_odds_api = {
     'api_key': '',
