@@ -13,7 +13,7 @@ AWS_ACCESS_KEY_ID = st.secrets['aws_access_key'] if s3 else None
 AWS_SECRET_ACCESS_KEY = st.secrets['aws_secret_access_key'] if s3 else None
 
 the_odds_api = {
-    'api_key': '',
+    'api_key': st.secrets['odds_api_key'],
     'data_directory': s3_path if s3 else 'data',
     'odds_file': 'odds.parquet',
     'h2h_odds_file': 'odds_h2h.parquet',
