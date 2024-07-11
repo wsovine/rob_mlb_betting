@@ -14,8 +14,8 @@ from time import sleep
 
 import config
 from config import *
-from utils import aggregated_pitching_stats, aggregated_batting_stats
-from models import model_ou_probability
+from utils import aggregated_pitching_stats, aggregated_batting_stats, prob_to_odds
+from models import model_ou_probability, model_h2h_probability
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -1398,6 +1398,11 @@ def load_and_create_dataset():
 
     # Model Over Under probs
     df_mod = model_ou_probability(df_clean, cv_iters=10)
+
+    # Model H2H probs
+    df_mod = model_h2h_probability(df_mod, cv_iters=10)
+    df_mod['min_home_odds'] = df_mod['home_win_prob'].apply(lambda p: prob_to_odds(p, 0.04))
+    df_mod['min_away_odds'] = df_mod['away_win_prob'].apply(lambda p: prob_to_odds(p, 0.04))
 
     # Save complete dataset
     df_mod.to_parquet(complete_data_parquet, filesystem=filesystem)

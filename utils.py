@@ -238,3 +238,14 @@ def ou_win_payout(row):
     elif row['total_score'] < row['totals_open_point']:
         return odds_to_profit(row['totals_open_price_under'])
     return 0
+
+
+def prob_to_odds(prob: float, juice: float = 0.0) -> int:
+    p = prob + juice
+    if p > 0.5:
+        odds = (100 * p) / (1 - p)
+    elif p < 0.5:
+        odds = (100 * (1 - p)) / p
+    else:
+        odds = 100
+    return int(odds)
