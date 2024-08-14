@@ -6,7 +6,7 @@ s3 = True
 
 local_path = 'data'
 
-s3_bucket = 'rob-mlb-betting'
+s3_bucket = 'rt-mlb-betting'
 s3_path = f's3://{s3_bucket}'
 
 AWS_ACCESS_KEY_ID = st.secrets['aws_access_key'] if s3 else None
